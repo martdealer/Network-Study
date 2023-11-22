@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct Article: Decodable {
+struct Post: Decodable {
     let id: Int
     let title, content, createdAt, updatedAt: String
     let userID: Int
@@ -18,44 +18,75 @@ struct Article: Decodable {
     }
 }
 
+struct User: Decodable {
+    let id: Int
+    let name, username, email, phone: String
+    let website, province, city, district, street, zipcode: String
+    let createdAt, updatedAt: String
+}
+
 struct ContentView: View {
     
-    @State var data: [String] = ["zs", "ok"]
+    @State var posts: [String] = ["zs", "ok"]
+    @State var users: [String] = ["user1", "user2"]
+
     
     var body: some View {
         VStack {
             List {
-                ForEach(data, id: \.self) { item in
+                ForEach(posts, id: \.self) { item in
+                    Text(item)
+                }
+                ForEach(users, id: \.self) { item in
                     Text(item)
                 }
             }
             Button {
-                requestData()
+                requestPost()
             } label: {
-                Text("request")
+                Text("Request Post")
+            }
+            Button {
+                requestUser()
+            } label: {
+                Text("Requesst User")
             }
         }
     }
     
-    private func requestData() {
-        requestArticle { article, error in
-            guard let article = article else {
+    private func requestPost() {
+        requestPost { post, error in
+            guard let post = post else {
                 print(error)
                 return
             }
             
-            data.append(article.title)
+            posts.append(post.title)
         }
     }
     
-    func requestArticle(completed: @escaping (Article?, String?) -> ()) {
+    private func requestUser() {
+        requestUser { user, error in
+            guard let user = user else {
+                print(error)
+                return
+            }
+            
+            users.append(user.name ?? "ErrorName")
+        }
+    }
+    
+    
+    func requestPost(completed: @escaping (Post?, String?) -> ()) {
         let endPoint = "https://koreanjson.com/posts/1"
+
         
         guard let url = URL(string: endPoint) else {
             completed(nil, "!@!@ INVALID URL")
             return
         }
         
+        // url을 보내고 , d-r-e를 받아서 처리할 수 있는 함수를 보냄
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
             if let _ = error  {
                 completed(nil, "!@!@ ERROR")
@@ -70,7 +101,43 @@ struct ContentView: View {
             }
             
             do {
-                let decodedResponse = try JSONDecoder().decode(Article.self,
+                let decodedResponse = try JSONDecoder().decode(Post.self,
+                                                               from: data)
+                //data.append(decodedResponse.title)
+                completed(decodedResponse, nil)
+            } catch {
+                print(error)
+            }
+            
+            
+        }.resume()
+    }
+    
+    func requestUser(completed: @escaping (User?, String?) -> ()) {
+        let endPoint = "https://koreanjson.com/users/1"
+
+        
+        guard let url = URL(string: endPoint) else {
+            completed(nil, "!@!@ INVALID URL")
+            return
+        }
+        
+        // url을 보내고 , d-r-e를 받아서 처리할 수 있는 함수를 보냄
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            if let _ = error  {
+                completed(nil, "!@!@ ERROR")
+            }
+            
+            guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+                return completed(nil, "!@!@ INVALID RESPONSE")
+            }
+            
+            guard let data = data else {
+                return completed(nil, "!@!@ INVALID DATA")
+            }
+            
+            do {
+                let decodedResponse = try JSONDecoder().decode(User.self,
                                                                from: data)
                 //data.append(decodedResponse.title)
                 completed(decodedResponse, nil)
